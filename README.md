@@ -9,31 +9,16 @@ A machine learning-based email spam classifier built with Python and Streamlit.
 - Interactive web interface using Streamlit
 - Real-time spam detection with confidence scores
 
-## Installation
+## Setup
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/email-spam-classifier.git
-cd email-spam-classifier
-```
-
-2. Create a virtual environment:
+1. Create virtual environment and install dependencies:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Dataset
-
-Download the SMS Spam Collection dataset and place it as `spam.csv` in the `data/` folder.
-The dataset should have two columns: `v1` (ham/spam labels) and `v2` (text content).
-
-Dataset source: [UCI ML Repository - SMS Spam Collection](https://archive.ics.uci.edu/ml/datasets/SMS+Spam+Collection)
+2. Download the SMS Spam Collection dataset from Kaggle and place it as `spam.csv` in the `data/` folder.
 
 ## Usage
 
@@ -46,8 +31,6 @@ python model/train_model.py
 ```bash
 streamlit run app/streamlit_app.py
 ```
-
-3. Open your browser and navigate to http://localhost:8501
 
 ## Model Performance
 
@@ -64,19 +47,21 @@ email-spam-classifier/
 ├── model/
 │   ├── train_model.py        # Model training script
 │   └── model.pkl             # Trained model (generated)
+├── preprocessing/
+│   └── preprocess.py         # Text preprocessing utilities
 ├── data/
 │   └── spam.csv             # Dataset (download separately)
 ├── requirements.txt          # Python dependencies
-├── README.md                # Project documentation
-└── .gitignore               # Git ignore rules
+└── README.md                # Project documentation
 ```
 
 ## Technical Details
 
 ### Preprocessing
 - Text normalization (lowercase)
+- HTML tag removal
 - URL and email removal
-- Selective punctuation retention for spam indicators
+- Non-alphabetic character removal
 - Whitespace normalization
 
 ### Model
@@ -84,6 +69,3 @@ email-spam-classifier/
 - Logistic Regression with balanced class weights
 - Cross-validation for optimal hyperparameters
 
-## License
-
-MIT License

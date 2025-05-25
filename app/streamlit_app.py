@@ -3,31 +3,24 @@ import joblib
 import re
 from pathlib import Path
 
-# Configure page
 st.set_page_config(page_title="Email Spam Classifier", page_icon="🚀")
 
-# FIXED: Match the training preprocessing exactly
 def preprocess_text(text):
     if not text:
         return ""
     
     text = str(text).lower()
     
-    # Remove URLs and emails but keep other patterns
     text = re.sub(r'http\S+|www\.\S+', ' ', text)
     text = re.sub(r'\S+@\S+', ' ', text)
     text = re.sub(r'<[^>]+>', ' ', text)
     
-    # Keep important punctuation and numbers for spam detection
-    # Only remove excessive punctuation - SAME AS TRAINING
     text = re.sub(r'[^\w\s!$%]', ' ', text)
     
-    # Remove extra whitespace
     text = ' '.join(text.split())
     
     return text
 
-# Load model
 @st.cache_resource
 def load_model():
     try:
@@ -36,7 +29,6 @@ def load_model():
         if model_path.exists():
             return joblib.load(model_path)
         else:
-            # Try current directory
             if Path('model.pkl').exists():
                 return joblib.load('model.pkl')
             st.error(f"Model not found at: {model_path}")
@@ -47,7 +39,6 @@ def load_model():
 
 model = load_model()
 
-# UI
 st.title("🚀 Email Spam Classifier")
 
 email_text = st.text_area("Enter Email Content", height=150)
@@ -66,7 +57,6 @@ if st.button("🔍 Classify Email"):
                     prediction = model.predict([cleaned_text])[0]
                     probability = model.predict_proba([cleaned_text])[0]
                     
-                    # Debug info
                     st.write(f"**Debug:** Original: `{email_text[:100]}...`")
                     st.write(f"**Debug:** Cleaned: `{cleaned_text[:100]}...`")
                     st.write(f"**Debug:** Prediction: {prediction}, Probabilities: {probability}")
@@ -85,7 +75,6 @@ if st.button("🔍 Classify Email"):
     else:
         st.warning("⚠️ Please enter email text.")
 
-# Test examples moved to bottom
 st.markdown("---")
 with st.expander("📝 Test Examples"):
     st.write("**Spam Examples:**")
