@@ -1,109 +1,97 @@
 import streamlit as st
 import joblib
-import sys
-import os
+import re
 from pathlib import Path
 
 # Configure page
-st.set_page_config(
-    page_title="Email Spam Classifier",
-    page_icon="🚀",
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="Email Spam Classifier", page_icon="🚀")
 
-# Add the parent directory to the Python path
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent
-sys.path.append(str(parent_dir))
-
-try:
-    from preprocessing.preprocess import preprocess_text
-except ImportError:
-    st.error("❌ Preprocessing module not found. Please check your project structure.")
-    st.stop()
-
-# Load model with better path handling
-@st.cache_resource
-def load_model():
-    """Load the trained model with caching for better performance"""
-    model_path = parent_dir / 'model' / 'model.pkl'
+# FIXED: Match the training preprocessing exactly
+def preprocess_text(text):
+    if not text:
+        return ""
     
-    if not model_path.exists():
-        st.error("❌ Model file not found! Please train the model first.")
-        st.info("Run: `python model/train_model.py` to train the model")
-        st.stop()
+    text = str(text).lower()
     
-    try:
-        return joblib.load(model_path)
-    except Exception as e:
-        st.error(f"❌ Error loading model: {str(e)}")
-        st.stop()
+    # Remove URLs and emails but keep other patterns
+    text = re.sub(r'http\S+|www\.\S+', ' ', text)
+    text = re.sub(r'\S+@\S+', ' ', text)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    
+    # Keep important punctuation and numbers for spam detection
+    # Only remove excessive punctuation - SAME AS TRAINING
+    text = re.sub(r'[^\w\s!$%]', ' ', text)
+    
+    # Remove extra whitespace
+    text = ' '.join(text.split())
+    
+    return text
 
 # Load model
+@st.cache_resource
+def load_model():
+    try:
+        parent_dir = Path(__file__).parent.parent
+        model_path = parent_dir / 'model' / 'model.pkl'
+        if model_path.exists():
+            return joblib.load(model_path)
+        else:
+            # Try current directory
+            if Path('model.pkl').exists():
+                return joblib.load('model.pkl')
+            st.error(f"Model not found at: {model_path}")
+            return None
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
+
 model = load_model()
 
-# Main UI
+# UI
 st.title("🚀 Email Spam Classifier")
-st.markdown("""
-**Classify emails as Spam or Ham (Not Spam) using Machine Learning**
 
-Simply paste your email content below and click classify!
-""")
+email_text = st.text_area("Enter Email Content", height=150)
 
-# Input section
-email_text = st.text_area(
-    "Enter Email Content",
-    placeholder="Paste your email text here...",
-    height=200,
-    help="Enter the email content you want to classify"
-)
-
-# Classification section
-if st.button("🔍 Classify Email", type="primary"):
+if st.button("🔍 Classify Email"):
     if email_text.strip():
-        try:
-            with st.spinner("🔄 Analyzing email..."):
-                # Preprocess text
+        if model is None:
+            st.error("❌ Model not found! Train the model first.")
+        else:
+            try:
                 cleaned_text = preprocess_text(email_text)
                 
-                # Make prediction
-                prediction = model.predict([cleaned_text])[0]
-                probability = model.predict_proba([cleaned_text])[0]
-                
-                # Display results
-                col1, col2 = st.columns(2)
-                
-                with col1:
+                if not cleaned_text.strip():
+                    st.warning("⚠️ No text left after preprocessing")
+                else:
+                    prediction = model.predict([cleaned_text])[0]
+                    probability = model.predict_proba([cleaned_text])[0]
+                    
+                    # Debug info
+                    st.write(f"**Debug:** Original: `{email_text[:100]}...`")
+                    st.write(f"**Debug:** Cleaned: `{cleaned_text[:100]}...`")
+                    st.write(f"**Debug:** Prediction: {prediction}, Probabilities: {probability}")
+                    
                     if prediction == 1:
                         st.error("🚨 **SPAM DETECTED**")
                         confidence = probability[1]
                     else:
                         st.success("✅ **LEGITIMATE EMAIL**")
                         confidence = probability[0]
-                
-                with col2:
+                    
                     st.metric("Confidence", f"{confidence:.1%}")
                 
-                # Additional info
-                st.markdown("---")
-                with st.expander("📊 View Prediction Details"):
-                    st.write(f"**Spam Probability:** {probability[1]:.3f}")
-                    st.write(f"**Ham Probability:** {probability[0]:.3f}")
-                    st.write(f"**Processed Text Length:** {len(cleaned_text)} characters")
-                    
-        except Exception as e:
-            st.error(f"❌ Error during classification: {str(e)}")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
     else:
-        st.warning("⚠️ Please enter some email text to classify.")
+        st.warning("⚠️ Please enter email text.")
 
-# Footer
+# Test examples moved to bottom
 st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; color: #666;'>
-        <small>Built with Streamlit | Email Spam Classification using ML</small>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
+with st.expander("📝 Test Examples"):
+    st.write("**Spam Examples:**")
+    st.code("URGENT! You've won $1000000! Click here NOW! Limited time offer!")
+    st.code("FREE money! Call now! Act fast!")
+    st.code("Congratulations! You have won $1000! Claim now!")
+    st.write("**Ham Examples:**")
+    st.code("Hi, can we schedule a meeting for tomorrow at 3pm?")
+    st.code("Thanks for the document, I'll review it today.")
